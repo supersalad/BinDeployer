@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Reflection;
 
 namespace BinDeployer
 {
@@ -16,7 +17,7 @@ namespace BinDeployer
         {
 #if DEBUG
             //some test parameters
-            args = new[] {"/s", @"c:\dev\ConsoleApplication1", "/t", @"c:\Temp\test_deploy"};
+            args = new[] { "/s", @"deploy\myFile.txt", "/t", @"C:\dev\dummysite" };
 #endif
 
             //todo: test required arguments and show help text if bad args
@@ -57,20 +58,48 @@ namespace BinDeployer
             //validate number of source and target folders
             if (sourceFolders.Count < 1 || sourceFolders.Count != targetFolders.Count)
             {
-                Console.WriteLine("The number of source folders must be at least one and there must be the same number of target folders as source folders");
+                Console.WriteLine("The number of sources must be at least one and there must be the same number of targets as sources");
                 return;
             }
 
+
+            //relative paths in the source?
+            string assemblyPath = null;
+            for (var i = 0; i < sourceFolders.Count; i++)
+            {
+                if (sourceFolders[i].Contains(":")) continue; //assume absolute path
+
+                assemblyPath = assemblyPath ?? Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+                sourceFolders[i] = Path.Combine(assemblyPath,  sourceFolders[i]);
+            }
 
             //validate that paths exists and that we can write to the target folders
-            foreach (var sourceFolder in sourceFolders.Where(sourceFolder => !Directory.Exists(sourceFolder)))
+            foreach (var sourceFolder in sourceFolders.Where(sourceFolder => !Directory.Exists(sourceFolder) && !File.Exists(sourceFolder)))
             {
-                Console.WriteLine("The source folder: {0} does not exists.", sourceFolder);
+                Console.WriteLine("The source: {0} does not exists.", sourceFolder);
                 return;
             }
 
 
-            //todo: test if it seems to be the correct folders? - perform a test merge...
+            //if a source is a file and the corresponding target is a folder - adjust the target to the corresponding file (so we don't back up the full folder)
+            for (var i = 0; i < sourceFolders.Count; i++)
+            {
+                if (!File.Exists(sourceFolders[i])) continue; //not a file
+
+                if (File.Exists(targetFolders[i])) continue; //ok - the corresponging target is a corresponding file
+
+                if (Directory.Exists(targetFolders[i]))
+                {
+                    var targetFile = Path.Combine(targetFolders[i], Path.GetFileName(sourceFolders[i]));
+                    //keep the target as a folder if the file doesn't exists i.e new file
+                    if (File.Exists(targetFile)) targetFolders[i] = targetFile;
+                }
+            }
+
+
+
+            //todo: test if it seems to be the correct folders?
 
 
 
@@ -87,8 +116,8 @@ namespace BinDeployer
                 }
             }
 
-            Console.WriteLine("Replacing folders: {0}", String.Join(", ", targetFolders));
-            Console.WriteLine("with folders: {0}", String.Join(", ", sourceFolders));
+            Console.WriteLine("Replacing: {0}", String.Join(", ", targetFolders));
+            Console.WriteLine("with: {0}", String.Join(", ", sourceFolders));
 
             Console.WriteLine("But first we'll do a little backup...");
             Console.WriteLine("Continue? (y/n)");
@@ -150,18 +179,25 @@ namespace BinDeployer
         private static List<string> DoBackup(List<string> targetFolders)
         {
             //perform backup
-            var backupFolder = Path.Combine(System.IO.Path.GetTempPath(), "BinDeployer", DateTime.Now.ToString("yyMMddhhmmss"), Guid.NewGuid().ToString());
+            //var backupFolder = Path.Combine(System.IO.Path.GetTempPath(), "BinDeployer", DateTime.Now.ToString("yyMMddhhmmss"), Guid.NewGuid().ToString());
+            var assemblyPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var backupFolder = Path.Combine(assemblyPath, "backup");
             if (!Directory.Exists(backupFolder)) Directory.CreateDirectory(backupFolder);
 
 
             Console.WriteLine("Creating backup folder...");
             var backupFolders = new List<string>(targetFolders.Count);
-
+            var multitarget = targetFolders.Count > 1;
             foreach (var targetFolder in targetFolders)
             {
-                var targetBackupPath = Path.Combine(backupFolder, Path.GetFileName(targetFolder));
+                //todo:if just files - no need to create folders for the targets...
+
+                var targetBackupPath = multitarget ? Path.Combine(backupFolder, Path.GetFileName(targetFolder))
+                    : backupFolder;
                 if (!Directory.Exists(targetBackupPath)) Directory.CreateDirectory(targetBackupPath);
-                
+
+                if (File.Exists(targetFolder)) targetBackupPath = Path.Combine(targetBackupPath, Path.GetFileName(targetFolder));
+
                 backupFolders.Add(targetBackupPath);
             }
 
@@ -175,6 +211,14 @@ namespace BinDeployer
 
         private static void CopyFolder(string sourceFolder, string targetFolder, List<string> excludePatterns)
         {
+            //files?
+            if (File.Exists(sourceFolder))
+            {
+                Console.WriteLine("Copy {0} to {1}", sourceFolder, targetFolder);
+                File.Copy(sourceFolder, targetFolder, true);
+                return;
+            }
+
             //Now Create all of the directories
             foreach (string dirPath in Directory.GetDirectories(sourceFolder, "*",
                 SearchOption.AllDirectories))

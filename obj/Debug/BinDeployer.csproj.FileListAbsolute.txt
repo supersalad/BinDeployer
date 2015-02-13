@@ -1,0 +1,12 @@
+C:\dev\BinDeployer\BinDeployer\bin\Debug\BinDeployer.exe.config
+C:\dev\BinDeployer\BinDeployer\bin\Debug\BinDeployer.exe
+C:\dev\BinDeployer\BinDeployer\bin\Debug\BinDeployer.pdb
+C:\dev\BinDeployer\BinDeployer\obj\Debug\BinDeployer.csprojResolveAssemblyReference.cache
+C:\dev\BinDeployer\BinDeployer\obj\Debug\BinDeployer.exe
+C:\dev\BinDeployer\BinDeployer\obj\Debug\BinDeployer.pdb
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\bin\Debug\BinDeployer.exe.config
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\obj\Debug\BinDeployer.exe
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\obj\Debug\BinDeployer.pdb
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\bin\Debug\BinDeployer.exe
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\bin\Debug\BinDeployer.pdb
+C:\Users\andfol.KODEXE\Documents\GitHub\BinDeployer\obj\Debug\BinDeployer.csprojResolveAssemblyReference.cache
