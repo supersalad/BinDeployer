@@ -17,7 +17,7 @@ namespace BinDeployer
         {
 #if DEBUG
             //some test parameters
-            args = new[] { "/s", @"deploy\myFile.txt", "/t", @"C:\dev\dummysite" };
+            args = new[] { "/s", @"C:\Temp\test_deploy\live1", "/t", @"C:\Temp\test_deploy\new1" };
 #endif
 
             //todo: test required arguments and show help text if bad args
@@ -58,7 +58,7 @@ namespace BinDeployer
             //validate number of source and target folders
             if (sourceFolders.Count < 1 || sourceFolders.Count != targetFolders.Count)
             {
-                Console.WriteLine("The number of sources must be at least one and there must be the same number of targets as sources");
+                WriteLine("The number of sources must be at least one and there must be the same number of targets as sources", ConsoleStatus.Alert);
                 return;
             }
 
@@ -77,7 +77,7 @@ namespace BinDeployer
             //validate that paths exists and that we can write to the target folders
             foreach (var sourceFolder in sourceFolders.Where(sourceFolder => !Directory.Exists(sourceFolder) && !File.Exists(sourceFolder)))
             {
-                Console.WriteLine("The source: {0} does not exists.", sourceFolder);
+                WriteLine(String.Format("The source: {0} does not exists.", sourceFolder), ConsoleStatus.Warning);
                 return;
             }
 
@@ -107,8 +107,8 @@ namespace BinDeployer
             var feedback = "";
             if (!excludedPatterns.Contains("*.config"))
             {
-                Console.WriteLine("You're not excluding *.config files.");
-                Console.WriteLine("Do you want to exclude *.config files? (y/n)");
+                WriteLine("You're not excluding *.config files.", ConsoleStatus.Warning);
+                WriteLine("Do you want to exclude *.config files? (y/n)", ConsoleStatus.Warning);
                 feedback = Console.ReadLine() ?? "";
                 if (feedback.StartsWith("y"))
                 {
@@ -116,11 +116,11 @@ namespace BinDeployer
                 }
             }
 
-            Console.WriteLine("Replacing: {0}", String.Join(", ", targetFolders));
-            Console.WriteLine("with: {0}", String.Join(", ", sourceFolders));
+            WriteLine(String.Format("Replacing: {0}", String.Join(", ", targetFolders)));
+            WriteLine(String.Format("with: {0}", String.Join(", ", sourceFolders)));
 
-            Console.WriteLine("But first we'll do a little backup...");
-            Console.WriteLine("Continue? (y/n)");
+            WriteLine("But first we'll do a little backup...");
+            WriteLine("Continue? (y/n)");
             feedback = Console.ReadLine() ?? "";
             if (!feedback.ToLower().StartsWith("y")) return;
             //perform the backup
@@ -131,31 +131,31 @@ namespace BinDeployer
 
 
             //perform copy
-            Console.WriteLine("");
-            Console.WriteLine("The files are backed up, continue with copy into live site? (y/n)");
+            WriteLine("");
+            WriteLine("The files are backed up, continue with copy into live site? (y/n)", ConsoleStatus.Success);
             feedback = Console.ReadLine() ?? "";
             if (!feedback.ToLower().StartsWith("y")) return;
 
 
-            Console.WriteLine("Deploying files...");
+            WriteLine("Deploying files...");
             DoCopy(sourceFolders, targetFolders, excludedPatterns);
 
-            Console.WriteLine("Are you happy?");
-            Console.WriteLine("Being not happy will make me copy the backup up files back over your new files");
-            Console.WriteLine("So, are you happy? Are you? (y/n)");
+            WriteLine("Are you happy?", ConsoleStatus.Success);
+            WriteLine("Being not happy will make me copy the backup up files back over your new files", ConsoleStatus.Success);
+            WriteLine("So, are you happy? Are you? (y/n)", ConsoleStatus.Success);
             feedback = Console.ReadLine() ?? "";
 
             if (feedback.ToLower().StartsWith("y"))
             {
-                Console.WriteLine("Pleasure doing business with you");
-                Console.WriteLine("Press any key to exit");
+                WriteLine("Pleasure doing business with you", ConsoleStatus.Success);
+                WriteLine("Press any key to exit");
             }
             else
             {
                 DoCopy(backupFolders, targetFolders, excludedPatterns);
 
-                Console.WriteLine("The files are restored (any new files from your source will remain in the target dirs)");
-                Console.WriteLine("Press any key to exit");
+                WriteLine("The files are restored (any new files from your source will remain in the target dirs)", ConsoleStatus.Success);
+                WriteLine("Press any key to exit");
             }
 
             
@@ -170,7 +170,7 @@ namespace BinDeployer
             {
                 var sourceFolder = sourceFolders[i];
                 var targetFolder = targetFolders[i];
-                Console.WriteLine("Copying files from {0} to {1}", sourceFolder, targetFolder);
+                WriteLine(String.Format("Copying files from {0} to {1}", sourceFolder, targetFolder));
                 CopyFolder(sourceFolder, targetFolder, excludePatterns);
             }
         }
@@ -185,7 +185,7 @@ namespace BinDeployer
             if (!Directory.Exists(backupFolder)) Directory.CreateDirectory(backupFolder);
 
 
-            Console.WriteLine("Creating backup folder...");
+            WriteLine("Creating backup folder...");
             var backupFolders = new List<string>(targetFolders.Count);
             var multitarget = targetFolders.Count > 1;
             foreach (var targetFolder in targetFolders)
@@ -201,7 +201,7 @@ namespace BinDeployer
                 backupFolders.Add(targetBackupPath);
             }
 
-            Console.WriteLine("Backing up files...");
+            WriteLine("Backing up files...");
             DoCopy(targetFolders, backupFolders, null); //don't exclude files when backing up
 
             return backupFolders;
@@ -214,7 +214,7 @@ namespace BinDeployer
             //files?
             if (File.Exists(sourceFolder))
             {
-                Console.WriteLine("Copy {0} to {1}", sourceFolder, targetFolder);
+                WriteLine(String.Format("Copy {0} to {1}", sourceFolder, targetFolder));
                 File.Copy(sourceFolder, targetFolder, true);
                 return;
             }
@@ -231,12 +231,12 @@ namespace BinDeployer
 
                 if (excludePatterns != null && ExcludeFile(sourceFile, excludePatterns))
                 {
-                    Console.WriteLine("Excluding file {0}", sourceFile);
+                    WriteLine(String.Format("Excluding file {0}", sourceFile));
                     continue;
                 }
 
                 var targetFile = sourceFile.Replace(sourceFolder, targetFolder);
-                Console.WriteLine("Copy {0} to {1}", sourceFile, targetFile);
+                WriteLine(String.Format("Copy {0} to {1}", sourceFile, targetFile));
                 File.Copy(sourceFile, targetFile, true);
 
             }
@@ -252,6 +252,36 @@ namespace BinDeployer
             }
 
             return false;
+        }
+
+
+        private enum ConsoleStatus
+        {
+            Default,
+            Warning,
+            Alert,
+            Success
+        }
+
+
+        private static void WriteLine(string text, ConsoleStatus status = ConsoleStatus.Default)
+        {
+            switch (status)
+            {
+                    case ConsoleStatus.Warning:
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        break;
+                    case ConsoleStatus.Alert:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        break;
+                    case ConsoleStatus.Success:
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        break;
+            }
+
+            Console.WriteLine(text);
+
+            Console.ResetColor();
         }
     }
 }
